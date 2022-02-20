@@ -263,19 +263,6 @@ class Pawn:
             self.has_moved = True
             self.board.newMove(self)
 
-        # Pawn Promoting
-        if (self.color == "black" and self.pos["row"] == 0) or (self.color == "white" and self.pos["row"] == 7):
-            self.board.remove(pos2, take=True)
-            promotion = input("Promote your pawn: ").upper()
-            if promotion == "QUEEN":
-                self.board.add(Queen(self.color, self.pos, self.board), self.pos, new=True)
-            elif promotion == "ROOK":
-                self.board.add(Rook(self.color, self.pos, self.board), self.pos, new=True)
-            elif promotion == "BISHOP":
-                self.board.add(Bishop(self.color, self.pos, self.board), self.pos, new=True)
-            elif promotion == "KNIGHT":
-                self.board.add(Knight(self.color, self.pos, self.board), self.pos, new=True)
-
     def undoMove(self, piece, pos1):
         self.board.remove(self.pos)
         self.board.add(self, pos1)
