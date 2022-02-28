@@ -1,4 +1,5 @@
 from board import *
+from bot import *
 from time import sleep
 import sys
 
@@ -64,7 +65,12 @@ def play(board, switch=False, show_FEN=False):
 
         if board.check(color_switch[color]):
             if board.checkMate(color_switch[color]):
-                board.print()
+                if switch:
+                    board.print(color=color)
+                else:
+                    board.print()
+                if show_FEN:
+                    print(board.getFEN())
                 print(f"\nCHECKMATE, {color} wins")
                 return 0
             else:
@@ -75,6 +81,8 @@ def play(board, switch=False, show_FEN=False):
                 board.print(color=color)
             else:
                 board.print()
+            if show_FEN:
+                print(board.getFEN())
             sleep(1)
             print("\nSTALEMATE: No available moves")
             sleep(1)
@@ -84,6 +92,8 @@ def play(board, switch=False, show_FEN=False):
                 board.print(color=color)
             else:
                 board.print()
+            if show_FEN:
+                print(board.getFEN())
             sleep(1)
             print("\nSTALEMATE: No player can win")
             sleep(1)
@@ -93,6 +103,8 @@ def play(board, switch=False, show_FEN=False):
                 board.print(color=color)
             else:
                 board.print()
+            if show_FEN:
+                print(board.getFEN())
             sleep(1)
             print("\nSTALEMATE: Repeated moves")
             sleep(1)
@@ -100,7 +112,7 @@ def play(board, switch=False, show_FEN=False):
         color = color_switch[color]
 
 
-def loadMoves(board, moves, switch=False, sleep_time=0.5):
+def loadMoves(board, moves, switch=False, show_FEN=False, sleep_time=0.5):
     for color, move in moves:
         move = move.upper()
 
@@ -162,6 +174,8 @@ def loadMoves(board, moves, switch=False, sleep_time=0.5):
             board.print(color=color)
         else:
             board.print()
+        if show_FEN:
+            print(board.getFEN())
 
         if board.check(color_switch[color]):
             if board.checkMate(color_switch[color]):
@@ -211,6 +225,3 @@ if __name__ == "__main__":
     print("Welcome to Python Console Chess: ")
     sleep(1)
     play(board, switch=switch, show_FEN=show_FEN)
-
-
-
