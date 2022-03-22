@@ -1,4 +1,4 @@
-# Console Chess in Python
+# Console Chess in Python (Update Coming Soon)
 
 
 A python program for playing chess in the console. The board is created using a mess of print statements and for loops.
