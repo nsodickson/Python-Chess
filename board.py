@@ -155,25 +155,10 @@ class Board:
                                 self.black_king.setPos(pos)
                             else:
                                 self.addNew(piece_icons[current.upper()]("black", pos, self), pos)
+                                
+            # Currently Ignore Other Fields
 
-            if len(FEN) == 2:
-                self.current_color = {"w": "white", "b": "black"}[FEN[1]]
-
-            if len(FEN) == 3:
-                # Third Field
-                pass
-
-            if len(FEN) == 4:
-                # Fourth Field
-                pass
-
-            if len(FEN) == 5:
-                self.fifty_move_counter = int(FEN[4])
-                pass
-
-            # Field six is irrelevant
-
-        except KeyError:
+        except (KeyError, IndexError):
             print("Invalid FEN string")
 
     def transpose(self, board="self.board"):
