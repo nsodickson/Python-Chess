@@ -1,6 +1,6 @@
 # Console Chess in Python
 
-# Requires: pytorch, sci-kit learn, and pandas
+**Requires: [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/install.html), and [pandas](https://pandas.pydata.org/docs/getting_started/install.html)**
 
 A python program for playing chess in the console. The board is created using a mess of print statements and for loops.
 
