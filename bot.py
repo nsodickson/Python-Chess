@@ -207,7 +207,7 @@ if __name__ == "__main__":
     
     The Chess data has the above lisence 
     """
-    chess_data = pd.read_csv("ChessData/chessData.csv", nrows=12000000)
+    chess_data = pd.read_csv("ChessData/chessData.csv", nrows=1000000)
 
     data_X, data_y = chess_data["FEN"], chess_data["Evaluation"]
     data_X = data_X.apply(FENToOneHot)
