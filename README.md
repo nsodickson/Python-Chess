@@ -14,7 +14,7 @@ The [pieces.py](\pieces.py) file contains the class definitions of all the diffe
 
 The [extras.py](extras.py) file simply contains any extra global functions and variables used by all the other files.
 
-The [bot.py](bot.py) file contains all the code of the chess bot, and if it is run directly, it will retrain the bot and serialize it to the [bot.pkl](bot.pkl) file. If you want to run the bot.py file to retrain the neural network, head to this link [ChessData](https://www.kaggle.com/datasets/ronakbadhe/chess-evaluations), downlaod the csv files, and change the pathname in the code accordingly.
+The [bot.py](bot.py) file contains all the code of the chess bot, and if it is run directly, it will retrain the neural network and serialize it to the [bot.pkl](bot.pkl) file. If you want to run the bot.py file directly, head to this link [ChessData](https://www.kaggle.com/datasets/ronakbadhe/chess-evaluations), downlaod the csv files, and change the pathname in the code accordingly. The bot uses a simple look forward tree algorithm, but relies on a trained neural network for board state evaluations.
 
 Why I made this: I am a computer science high school student who is interested in a variety of computer science related topics. I mostly code in python and java, but I have also dabbled in c and c++. A few months ago, I decided to set myself a challenge to code chess in python, something I didn't think I would be able to do at the time. Low and behold, a week or two of an unhealthy coding schedule later, I finished it! It isn't perfect, but I am proud of it, so a few days ago I decided to share it with the world.
 
