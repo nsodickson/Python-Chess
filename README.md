@@ -1,6 +1,6 @@
 # Console Chess in Python
 
-**Requires: [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/install.html), and [pandas](https://pandas.pydata.org/docs/getting_started/install.html)**
+**Run install.py to set up environment**
 
 A python program for playing chess in the console. The board is created using a mess of print statements and for loops.
 
@@ -22,4 +22,4 @@ What I do with it: The main purpose of this project was just to prove to myself 
 
 Playing against the bot: To play against the chess bot, simply call the openBot function, use the setColor method to set the bot's color (all lowercase), and set the ai_player parameter of play function to the resulting bot.
 
-Disclaimers: If you play this on a dark color scheme console, the colors of the pieces might appear switched. To fix this, you can go to the init method of the piece classes and switch the black and white icons. Finally, by default, the board doesn't switch between white's and black's perspective after every move. You can turn this feature on by changing the switch parameter of the play function in main.py to False. Other parameters of the play function affect the style of the game.
+Disclaimers: Running the bot.py file will create an error if you haven't downloaded the [ChessData](https://www.kaggle.com/datasets/ronakbadhe/chess-evaluations) and changed the file path in the code. If you play this on a dark color scheme console, the colors of the pieces might appear switched. To fix this, you can go to the init method of the piece classes and switch the black and white icons. Finally, by default, the board doesn't switch between white's and black's perspective after every move. You can turn this feature on by changing the switch parameter of the play function in main.py to False. Other parameters of the play function affect the style of the game.
