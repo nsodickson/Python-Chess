@@ -22,7 +22,7 @@ def play(board, ai_player=None, switch_view=False, show_FEN=False, show_eval=Fal
         print("\n" + "-"*50)
 
         if ai_player is not None and ai_player.color == color:
-            move = ai_player.nextMove(board)
+            move = ai_player.deepSearch(board)
             print(f"\n{color[0].upper() + color[1:]}'s move: {detransformMove(move)}")
             board.parseMove(move, game_move=True)
             if show_eval:
@@ -133,7 +133,7 @@ def playFromCommandLine():
     play(board, switch_view=param2, show_FEN=param1)
 
 
-def openBot():
+def loadBot():
     with open("bot.pkl", 'rb') as f:
         return pkl.load(f)
 
@@ -143,5 +143,13 @@ if __name__ == "__main__":
     board.setup()
 
     print("Welcome to Python Chess")
+    with_ai = input("Would you like to play with the ai? (y)es/(n)o: ").upper()
+    if with_ai == "YES" or with_ai == "Y":
+        bot = loadBot()
+        bot.setColor(input("What color would you like the ai to be? ").lower())
+    else:
+        bot = None
 
-    play(board)
+    print("-"*50)
+
+    play(board, ai_player=bot)

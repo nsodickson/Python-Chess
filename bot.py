@@ -101,8 +101,14 @@ class Bot(torch.nn.Module):
                     best_move = move
 
                 board.parseMoveUndo(next_move, next_target, next_piece.color)
+
             else:
-                score = board.eval(color)
+                
+                if self.color == "black":
+                    score = -1 * self.forward(FENToOneHot(board.getFEN(fields=[1])))
+                else:
+                    score = self.forward(FENToOneHot(board.getFEN(fields=[1])))
+
                 if best_score is None or score > best_score:
                     best_score = score
                     best_move = move
@@ -110,40 +116,7 @@ class Bot(torch.nn.Module):
             board.parseMoveUndo(move, target, piece.color)
 
         return best_move
-
-    def nextMove(self, board, color=None):
-        if color is None:
-            color = self.color
-        else:
-            color = color
-
-        best_move = None
-        best_score = None
-
-        all_moves = board.allMoves(color)
-        rand.shuffle(all_moves)
-
-        for move in all_moves:
-            if type(move) == dict:
-                target = board.get(move["pos2"])
-            else:
-                target = None
-
-            board.parseMove(move, game_move=False)
-
-            if self.color == "black":
-                score = -1 * self.forward(FENToOneHot(board.getFEN(fields=[1])))
-            else:
-                score = self.forward(FENToOneHot(board.getFEN(fields=[1])))
-
-            if best_score is None or score > best_score:
-                best_score = score
-                best_move = move
-
-            board.parseMoveUndo(move, target, color)
-
-        return best_move
-
+        
 
 def yToTensor(y):
     output = []
