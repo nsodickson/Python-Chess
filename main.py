@@ -1,4 +1,4 @@
-from bot import Bot, FENToOneHot
+from bot import EvalBot, Bot, FENToOneHot
 from board import *
 from sys import argv
 import pickle as pkl
@@ -133,7 +133,7 @@ def playFromCommandLine():
     play(board, switch_view=param2, show_FEN=param1)
 
 
-def loadBot():
+def loadBot(stage=None):
     with open("bot.pkl", 'rb') as f:
         return pkl.load(f)
 

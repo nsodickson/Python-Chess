@@ -5,11 +5,17 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import pickle as pkl
 
+global ChessDataset
+global trainLoop
+global testLoop
+global yToTensor
 
 def FENToOneHot(FEN):
-    FEN = FEN.split()[0]
+    FEN = FEN.split()
     array = []
-    for i in FEN.split("/"):
+
+    # Field One (More Fields to come)
+    for i in FEN[0].split("/"):
         array.append([])
         for n in i:
             if n.isalpha():
@@ -17,15 +23,12 @@ def FENToOneHot(FEN):
             elif n.isdigit():
                 for q in range(int(n)):
                     array[-1].append(one_hot_pieces["."])
+
     return torch.tensor(array, dtype=torch.float32)
 
-
-class Bot(torch.nn.Module):
-    def __init__(self, color):
-        super(Bot, self).__init__()
-        self.color = color
-
-        # Initializing the Network
+class EvalBot(torch.nn.Module):
+    def __init__(self):
+        super(EvalBot, self).__init__()
         self.flatten_train = torch.nn.Flatten(start_dim=1)
         self.flatten_apply = torch.nn.Flatten(start_dim=0)
         self.linear_relu_stack = torch.nn.Sequential(
@@ -44,19 +47,33 @@ class Bot(torch.nn.Module):
             torch.nn.Linear(100, 1)
         )
 
+    def trainForward(self, board_state):
+        board_state = self.flatten_train(board_state)
+        board_state = self.linear_relu_stack(board_state)
+        return board_state
+
+    def forward(self, board_state):
+        board_state = self.flatten_apply(board_state)
+        board_state = self.linear_relu_stack(board_state)
+        return board_state[0]
+
+class Bot:
+    def __init__(self, color, eval_early, eval_middle, eval_late):
+        self.color = color
+        self.eval_early = eval_early
+        self.eval_middle = eval_middle
+        self.eval_late = eval_late
+    
     def setColor(self, color):
         self.color = color
-
-    def forward(self, board_state, batch_train=False):
-        if batch_train:
-            board_state = self.flatten_train(board_state)
+    
+    def eval(self, FEN, turns):
+        if turns <= 18:  # Arbitrary Number
+            return self.eval_early.forward(FENToOneHot(FEN))
+        elif turns <= 31:  # Arbitrary Number
+            return self.eval_middle.forward(FENToOneHot(FEN))
         else:
-            board_state = self.flatten_apply(board_state)
-        board_state = self.linear_relu_stack(board_state)
-        if batch_train:
-            return board_state
-        else:
-            return board_state[0]
+            return self.eval_late.forward(FENToOneHot(FEN))
 
     def random(self, board):
         all_moves = board.allMoves(self.color)
@@ -92,9 +109,9 @@ class Bot(torch.nn.Module):
                 board.parseMove(next_move, game_move=False)
 
                 if self.color == "black":
-                    score = -1 * self.forward(FENToOneHot(board.getFEN(fields=[1])))
+                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2))
                 else:
-                    score = self.forward(FENToOneHot(board.getFEN(fields=[1])))
+                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2))
 
                 if best_score is None or score > best_score:
                     best_score = score
@@ -105,9 +122,9 @@ class Bot(torch.nn.Module):
             else:
                 
                 if self.color == "black":
-                    score = -1 * self.forward(FENToOneHot(board.getFEN(fields=[1])))
+                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2))
                 else:
-                    score = self.forward(FENToOneHot(board.getFEN(fields=[1])))
+                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2))
 
                 if best_score is None or score > best_score:
                     best_score = score
@@ -128,22 +145,24 @@ def yToTensor(y):
     return torch.tensor(output)
 
 
-def trainLoop(dataloader, model, loss_fn, optimizer):
+def trainLoop(dataloader, model, loss_fn, optimizer, epochs):
     size = len(dataloader)
-    for batch, (X, y) in enumerate(dataloader):
-        y = yToTensor(y)
+    for epoch in range(epochs):
+        print(f"Epoch: {epoch}")
+        for batch, (X, y) in enumerate(dataloader):
+            y = yToTensor(y)
+            # Compute prediction and loss
+            pred = model.trainForward(X).flatten(start_dim=0)
+            loss = loss_fn(pred, y)
 
-        # Compute prediction and loss
-        pred = model.forward(X, batch_train=True).flatten(start_dim=0)
-        loss = loss_fn(pred, y)
+            # Backpropagation
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        # Backpropagation
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        loss, current = loss.item(), batch
-        print(f"loss: {loss:>7f} [{current + 1:>5d}/{size:>5d}]")
+            loss, current = loss.item(), batch
+            if batch % 10 == 0:
+                print(f"loss: {loss:>7f} [{current:>5d}/{size:>5d}]")
 
 
 def testLoop(dataloader, model, loss_fn):
@@ -174,13 +193,25 @@ class ChessDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return self.X_data.iloc[idx], self.y_data.iloc[idx]
 
+def chessTrainTestLoop(data, model, loss, optim, epochs):
+    data_X, data_y = data["FEN"], data["Evaluation"]
+    data_X = data_X.apply(FENToOneHot)
+    X_train, X_test, y_train, y_test = train_test_split(data_X, data_y, train_size=0.8, test_size=0.2)
 
-def sortData():
-    pass
+    train_data = ChessDataset(X_train, y_train)
+    test_data = ChessDataset(X_test, y_test)
 
+    training_data = torch.utils.data.DataLoader(train_data, batch_size=64)
+
+    testing_data = torch.utils.data.DataLoader(test_data)
+    
+    trainLoop(training_data, model, loss, optim, epochs)
+    testLoop(testing_data, model, loss)
 
 if __name__ == "__main__":
-    bot = Bot("white")
+    bot_early = EvalBot()
+    bot_middle = EvalBot()
+    bot_late = EvalBot()
 
     """
     MIT License
@@ -207,21 +238,20 @@ if __name__ == "__main__":
     
     The Chess data has the above lisence 
     """
-    chess_data = pd.read_csv("ChessData/chessData.csv", nrows=1000000)
+    rows = 9e5
+    chess_data = pd.read_csv("ChessData/chessData.csv", nrows=rows)
+    chess_data["Turns"] = chess_data["FEN"].apply(lambda FEN: int(FEN.split()[-1]))
+    chess_data = chess_data.sort_values(by=["Turns"])
 
-    data_X, data_y = chess_data["FEN"], chess_data["Evaluation"]
-    data_X = data_X.apply(FENToOneHot)
-    X_train, X_test, y_train, y_test = train_test_split(data_X, data_y, train_size=0.8, test_size=0.2)
+    chess_data_early = chess_data.iloc[0:int(rows/3), :]
+    chess_data_middle = chess_data.iloc[int(rows/3):int(2*rows/3), :]
+    chess_data_late = chess_data.iloc[int(2*rows/3):int(rows), :]
 
-    train_data = ChessDataset(X_train, y_train)
-    test_data = ChessDataset(X_test, y_test)
+    chessTrainTestLoop(chess_data_early, bot_early, torch.nn.L1Loss(), torch.optim.Adam(bot_early.parameters(), lr=1e-3), 5)
+    chessTrainTestLoop(chess_data_middle, bot_middle, torch.nn.L1Loss(), torch.optim.Adam(bot_middle.parameters(), lr=1e-3), 5)
+    chessTrainTestLoop(chess_data_late, bot_late, torch.nn.L1Loss(), torch.optim.Adam(bot_late.parameters(), lr=1e-3), 5)
 
-    training_data = torch.utils.data.DataLoader(train_data, batch_size=64)
-
-    testing_data = torch.utils.data.DataLoader(test_data)
-
-    trainLoop(training_data, bot, torch.nn.L1Loss(), torch.optim.Adam(bot.parameters(), lr=1e-3))
-    testLoop(testing_data, bot, torch.nn.L1Loss())
+    bot = Bot("white", bot_early, bot_middle, bot_late)
 
     with torch.no_grad():
         with open("bot.pkl", 'wb') as f:

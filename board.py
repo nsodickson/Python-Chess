@@ -18,6 +18,7 @@ class Board:
         self.has_castled = {"white": False, "black": False}
 
         self.moves = []
+        self.half_move_counter = 1
         self.fifty_move_counter = 0
         self.pieces = []
         self.current_color = "white"
@@ -414,8 +415,11 @@ class Board:
 
         return is_check
 
-    def newMove(self):
-        # Used exclusively for making sure pawns that moved two spaces in one move are only vulnerable to en passants the turn they were moved.
+    def newMove(self, move):
+        # Global changes that must be made when a new move is made
+        self.moves.append(move)
+        self.current_color = switch[self.current_color]
+        self.half_move_counter += 1
         for i in self.pieces:
             if isinstance(i, Pawn):
                 i.has_moved_two = False
@@ -480,7 +484,7 @@ class Board:
     def parseMove(self, move, game_move=True):
         try:
             if game_move:
-                self.newMove()
+                self.newMove(move)
 
             if move == "SHORT_CASTLE":
                 self.castle("SHORT", "white")
@@ -498,10 +502,6 @@ class Board:
                         self.fifty_move_counter += 1
                 
                 self.get(move["pos1"]).move(move["pos2"], game_move=game_move)
-
-            if game_move:
-                self.moves.append(move)
-                self.current_color = switch[self.current_color]
 
         except (TypeError, AttributeError):
             print("Move Parsing Error")
