@@ -56,6 +56,14 @@ class EvalBot(torch.nn.Module):
         board_state = self.flatten_apply(board_state)
         board_state = self.linear_relu_stack(board_state)
         return board_state[0]
+    
+    def algorithm(self, FEN):
+        total = 0
+        for i in FEN:
+            if i.isalpha():
+                total += scores[i]
+        return total
+
 
 class Bot:
     def __init__(self, color, eval_early, eval_middle, eval_late):
@@ -67,20 +75,23 @@ class Bot:
     def setColor(self, color):
         self.color = color
     
-    def eval(self, FEN, turns):
-        if turns <= 18:  # Arbitrary Number
-            return self.eval_early.forward(FENToOneHot(FEN))
-        elif turns <= 31:  # Arbitrary Number
-            return self.eval_middle.forward(FENToOneHot(FEN))
+    def eval(self, FEN, turns, uses_nn=True):
+        if uses_nn:
+            if turns <= 18:  # Arbitrary Number
+                return self.eval_early.forward(FENToOneHot(FEN))
+            elif turns <= 31:  # Arbitrary Number
+                return self.eval_middle.forward(FENToOneHot(FEN))
+            else:
+                return self.eval_late.forward(FENToOneHot(FEN))
         else:
-            return self.eval_late.forward(FENToOneHot(FEN))
+            return self.eval_early.algorithm(FEN)
 
     def random(self, board):
         all_moves = board.allMoves(self.color)
         rand.shuffle(all_moves)
         return all_moves[0]
 
-    def deepSearch(self, board, depth=2, color=None):
+    def deepSearch(self, board, depth=2, color=None, uses_nn=True):
         if color is None:
             color = self.color
         else:
@@ -109,9 +120,9 @@ class Bot:
                 board.parseMove(next_move, game_move=False)
 
                 if self.color == "black":
-                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2))
+                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
                 else:
-                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2))
+                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
 
                 if best_score is None or score > best_score:
                     best_score = score
@@ -122,9 +133,9 @@ class Bot:
             else:
                 
                 if self.color == "black":
-                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2))
+                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
                 else:
-                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2))
+                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
 
                 if best_score is None or score > best_score:
                     best_score = score

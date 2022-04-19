@@ -446,7 +446,7 @@ class Board:
 
         if self.has_castled[color]:
             return False
-        elif not (isinstance(rook, Rook) and not isinstance(king, King)):
+        elif (not isinstance(rook, Rook)) or (not isinstance(king, King)):
             return False
         elif rook.has_moved or king.has_moved:
             return False
