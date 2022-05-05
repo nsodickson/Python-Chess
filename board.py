@@ -48,6 +48,12 @@ class Board:
         self.__init__()
         self.setup()
 
+    def getMoves(self):
+        return self.moves
+    
+    def getNumMoves(self):
+         return 1+int(self.half_move_counter/2)
+
     def getFEN(self, fields=None):
         if fields is None:
             fields = [1, 2, 3, 4, 5, 6]
@@ -264,7 +270,6 @@ class Board:
         return False
 
     def check(self, color):
-
         # Find the position of the king
         if color == "black":
             king_pos = self.black_king.getPos()
@@ -404,7 +409,7 @@ class Board:
             pos1, pos2 = move["pos1"], move["pos2"]
 
         piece = self.get(pos1)
-        target = self.get(pos2)
+        target = self.get(pos2)  # Fix for en passants
 
         self.parseMove(move, game_move=False)
 
@@ -535,6 +540,3 @@ class Board:
                         self.addNew(target, target.getPos())  # You have to use target.getPos because of en passants
         except (TypeError, AttributeError):
             print("Move Undo Parsing Error. Move to undo likely hasn't been made.")
-
-
-

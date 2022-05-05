@@ -105,45 +105,30 @@ class Bot:
 
         for move in all_moves:
             if type(move) == dict:
-                target = board.get(move["pos2"])
+                target = board.get(move["pos2"])  # Fix for en passants
             else:
                 target = None
             piece = board.get(move["pos1"])
 
             board.parseMove(move, game_move=False)
-
+            
             if depth > 1:
-                next_move = self.deepSearch(board, depth-1, color=switch[color])
-                next_piece = board.get(next_move["pos1"])
-                next_target = board.get(next_move["pos2"])
-
-                board.parseMove(next_move, game_move=False)
-
-                if self.color == "black":
-                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
-                else:
-                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
-
+                score = -self.deepSearch(board, depth-1, color=switch[color])[1]
                 if best_score is None or score > best_score:
                     best_score = score
                     best_move = move
-
-                board.parseMoveUndo(next_move, next_target, next_piece.color)
-
             else:
-                
-                if self.color == "black":
-                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
-                else:
-                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
+                score = self.eval(board.getFEN(fields=[1]), board.getNumMoves(), uses_nn=uses_nn)
+                score = -score if color == "black" else score
 
                 if best_score is None or score > best_score:
                     best_score = score
                     best_move = move
-
+            print(f"Move: {detransformMove(move)} Score: {score}")
             board.parseMoveUndo(move, target, piece.color)
 
-        return best_move
+        
+        return best_move, best_score
         
 
 def yToTensor(y):

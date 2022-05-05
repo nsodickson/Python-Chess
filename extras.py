@@ -40,3 +40,4 @@ def detransformPos(dict_pos):
 
 def detransformMove(dict_move):
     return detransformPos(dict_move["pos1"]) + "x" + detransformPos(dict_move["pos2"])
+    
