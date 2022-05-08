@@ -5,6 +5,9 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import pickle as pkl
 
+# pos[0]: row, pos[1]: col
+# move[0]: position of piece, move[1]: position of target, move[2] whether or not the move is an en passant
+
 global ChessDataset
 global trainLoop
 global testLoop
@@ -104,46 +107,37 @@ class Bot:
         rand.shuffle(all_moves)
 
         for move in all_moves:
-            if type(move) == dict:
-                target = board.get(move["pos2"])
+
+            if type(move) == tuple:
+                piece = board.get(move[0])
+
+                if move[2]:
+                    target = board.get((move[0][0], move[1][1]))
+                else:
+                    target = board.get(move[1])
             else:
                 target = None
-            piece = board.get(move["pos1"])
 
             board.parseMove(move, game_move=False)
-
+            
             if depth > 1:
-                next_move = self.deepSearch(board, depth-1, color=switch[color])
-                next_piece = board.get(next_move["pos1"])
-                next_target = board.get(next_move["pos2"])
-
-                board.parseMove(next_move, game_move=False)
-
-                if self.color == "black":
-                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
-                else:
-                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
-
+                score = -self.deepSearch(board, depth-1, color=switch[color])[1]
                 if best_score is None or score > best_score:
                     best_score = score
                     best_move = move
-
-                board.parseMoveUndo(next_move, next_target, next_piece.color)
-
             else:
-                
-                if self.color == "black":
-                    score = -1 * self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
-                else:
-                    score = self.eval(board.getFEN(fields=[1]), 1+int(board.half_move_counter/2), uses_nn=uses_nn)
+                score = self.eval(board.getFEN(fields=[1]), board.getNumMoves(), uses_nn=uses_nn)
+                score = -score if color == "black" else score
 
                 if best_score is None or score > best_score:
                     best_score = score
+                    
                     best_move = move
 
-            board.parseMoveUndo(move, target, piece.color)
+            board.parseMoveUndo(move, target)
 
-        return best_move
+        
+        return best_move, best_score
         
 
 def yToTensor(y):

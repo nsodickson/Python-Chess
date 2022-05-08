@@ -4,6 +4,9 @@ from sys import argv
 import pickle as pkl
 from time import sleep
 
+# pos[0]: row, pos[1]: col
+# move[0]: position of piece, move[1]: position of target, move[2] whether or not the move is an en passant
+
 pieces = {"PAWN": Pawn, "ROOK": Rook, "BISHOP": Bishop, "QUEEN": Queen, "KNIGHT": Knight}
 
 
@@ -22,16 +25,15 @@ def play(board, ai_player=None, ai_uses_nn=True, switch_view=False, show_FEN=Fal
         print("\n" + "-"*50)
 
         if ai_player is not None and ai_player.color == color:
-            move = ai_player.deepSearch(board, uses_nn=ai_uses_nn)
-            print(f"\n{color[0].upper() + color[1:]}'s move: {detransformMove(move)}")
+            move, score = ai_player.deepSearch(board, uses_nn=ai_uses_nn)
+            print(f"\n{color[0].upper() + color[1:]}'s move: {moveToString(move)}")
             board.parseMove(move, game_move=True)
             if show_eval:
                 print(f"\nEval: {ai_player.forward(FENToOneHot(board.getFEN()))}")
             sleep(1)
 
         else:
-            while True:
-                # Turn Loop
+            while True:  # Turn Loop
                 try:
                     move = input(f"\n{color[0].upper() + color[1:]}'s move: ").upper()
                     # Sentinel Value
@@ -56,15 +58,16 @@ def play(board, ai_player=None, ai_uses_nn=True, switch_view=False, show_FEN=Fal
                             print("\nInvalid Castle")
                             continue
 
-                    move = transformMove(move)
-                    pos1, pos2 = move["pos1"], move["pos2"]
+                    pos1, pos2, enPassant = moveToTuple(move, False)
+                    enPassant = board.isEnPassant(pos1, pos2)
+                    move = (pos1, pos2, enPassant)
                     piece = board.get(pos1)
 
                     if isinstance(piece, Piece):
                         if piece.color == color:
                             if piece.checkMove(pos2):
                                 if not board.testCheck(pos1, pos2):
-                                    board.parseMove(move)
+                                    board.parseMove(move, game_move=True)
 
                                     # Pawn Promotion
                                     if isinstance(piece, Pawn):
@@ -90,10 +93,11 @@ def play(board, ai_player=None, ai_uses_nn=True, switch_view=False, show_FEN=Fal
                     else:
                         print("\nInvalid move: No piece there")
                         sleep(1)
-
+    
                 except (ValueError, TypeError, IndexError, KeyError):
                     print("\nInvalid move")
                     sleep(1)
+                
                 # End of Turn Loop
 
         if board.check(switch[color]):
@@ -112,8 +116,8 @@ def play(board, ai_player=None, ai_uses_nn=True, switch_view=False, show_FEN=Fal
         elif board.stalemateDraw():
             print("\nSTALEMATE: Repeated moves")
             break
-        elif board.fifty_move_counter >= 100:
-            print("\nSTALEMATEF: Fifty move rule initiated")
+        elif board.getNumMoves() >= 50:
+            print("\nSTALEMATE: Fifty move rule initiated")
 
         color = switch[color]
 
@@ -155,3 +159,4 @@ if __name__ == "__main__":
     print("-"*50)
 
     play(board, ai_player=bot, ai_uses_nn=uses_nn)
+    
