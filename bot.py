@@ -5,6 +5,9 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import pickle as pkl
 
+# pos[0]: row, pos[1]: col
+# move[0]: position of piece, move[1]: position of target, move[2] whether or not the move is an en passant
+
 global ChessDataset
 global trainLoop
 global testLoop
@@ -104,11 +107,16 @@ class Bot:
         rand.shuffle(all_moves)
 
         for move in all_moves:
-            if type(move) == dict:
-                target = board.get(move["pos2"])  # Fix for en passants
+
+            if type(move) == tuple:
+                piece = board.get(move[0])
+
+                if move[2]:
+                    target = board.get((move[0][0], move[1][1]))
+                else:
+                    target = board.get(move[1])
             else:
                 target = None
-            piece = board.get(move["pos1"])
 
             board.parseMove(move, game_move=False)
             
@@ -123,9 +131,10 @@ class Bot:
 
                 if best_score is None or score > best_score:
                     best_score = score
+                    
                     best_move = move
-            print(f"Move: {detransformMove(move)} Score: {score}")
-            board.parseMoveUndo(move, target, piece.color)
+
+            board.parseMoveUndo(move, target)
 
         
         return best_move, best_score

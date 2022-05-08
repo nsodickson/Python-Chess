@@ -1,5 +1,9 @@
+from click import File
 from pieces import *
 from extras import *
+
+# pos[0]: row, pos[1]: col
+# move[0]: position of piece, move[1]: position of target, move[2] whether or not the move is an en passant
 
 piece_icons = {"P": Pawn, "R": Rook, "N": Knight, "B": Bishop, "Q": Queen, "K": King}
 
@@ -203,7 +207,7 @@ class Board:
 
     def getFilePos(self, pos1=None, pos2=None, move=None):
         if pos1 is None and pos2 is None:
-            pos1, pos2 = move["pos1"], move["pos2"]
+            pos1, pos2 = move[0], move[1]
 
         if pos1[0] > pos2[0]:
             return self.transpose("self.board_pos")[pos1[1]][(pos2[0] + 1):pos1[0]]
@@ -212,7 +216,7 @@ class Board:
 
     def getRankPos(self, pos1=None, pos2=None, move=None):
         if pos1 is None and pos2 is None:
-            pos1, pos2 = move["pos1"], move["pos2"]
+            pos1, pos2 = move[0], move[1]
 
         if pos1[1] > pos2[1]:
             return self.board_pos[pos1[0]][(pos2[1] + 1):pos1[1]]
@@ -221,7 +225,7 @@ class Board:
 
     def getDiagonalPos(self, pos1=None, pos2=None, move=None):
         if pos1 is None and pos2 is None:
-            pos1, pos2 = move["pos1"], move["pos2"]
+            pos1, pos2 = move[0], move[1]
 
         if pos1[0] > pos2[0] and pos1[1] > pos2[1]:
             return [self.board_pos[pos1[0] - i][pos1[1] - i] for i in range(1, abs(pos2[0] - pos1[0]))]
@@ -375,7 +379,7 @@ class Board:
 
     def checkOpenFile(self, pos1=None, pos2=None, move=None):
         if pos1 is None and pos2 is None:
-            pos1, pos2 = move["pos1"], move["pos2"]
+            pos1, pos2 = move[0], move[1]
 
         for i in self.getFilePos(pos1, pos2):
             if isinstance(self.get(i), Piece):
@@ -384,7 +388,7 @@ class Board:
 
     def checkOpenRank(self, pos1=None, pos2=None, move=None):
         if pos1 is None and pos2 is None:
-            pos1, pos2 = move["pos1"], move["pos2"]
+            pos1, pos2 = move[0], move[1]
 
         for i in self.getRankPos(pos1, pos2):
             if isinstance(self.get(i), Piece):
@@ -393,7 +397,7 @@ class Board:
 
     def checkOpenDiagonal(self, pos1=None, pos2=None, move=None):
         if pos1 is None and pos2 is None:
-            pos1, pos2 = move["pos1"], move["pos2"]
+            pos1, pos2 = move[0], move[1]
 
         for i in self.getDiagonalPos(pos1, pos2):
             if isinstance(self.get(i), Piece):
@@ -404,19 +408,25 @@ class Board:
         is_check = False
 
         if move is None:
-            move = configureMove(pos1, pos2)
+            move = (pos1, pos2, self.isEnPassant(pos1, pos2))
         if pos1 is None and pos2 is None:
-            pos1, pos2 = move["pos1"], move["pos2"]
+            pos1, pos2 = move[0], move[1]
 
         piece = self.get(pos1)
-        target = self.get(pos2)  # Fix for en passants
+        if type(move) == tuple:
+            if move[2]:
+                target = self.get((pos1[0], pos2[1]))
+            else:
+                target = self.get(pos2)
+        else:
+            target = None
 
         self.parseMove(move, game_move=False)
 
         if self.check(piece.color):
             is_check = True
 
-        self.parseMoveUndo(move, target, piece.color)
+        self.parseMoveUndo(move, target)
 
         return is_check
 
@@ -472,7 +482,8 @@ class Board:
                 for piece in self.pieces:
                     if piece.color == color:
                         if piece.checkMove(square) and not self.testCheck(piece.getPos(), square):
-                            all_moves.append(configureMove(piece.getPos(), square))
+                            pos1, pos2 = piece.getPos(), square
+                            all_moves.append((pos1, pos2, self.isEnPassant(pos1, pos2)))
         if self.canCastle("SHORT", color):
             if color == "black":
                 all_moves.append("short_castle")
@@ -488,55 +499,94 @@ class Board:
 
     def parseMove(self, move, game_move=True):
         try:
+
+            is_en_passant = self.isEnPassant(move=move)
+
             if game_move:
                 self.newMove(move)
 
             if move == "SHORT_CASTLE":
                 self.castle("SHORT", "white")
+                self.fifty_move_counter += 1
             elif move == "short_castle":
                 self.castle("SHORT", "black")
+                self.fifty_move_counter += 1
             elif move == "LONG_CASTLE":
                 self.castle("LONG", "white")
+                self.fifty_move_counter += 1
             elif move == "long_castle":
                 self.castle("LONG", "black")
+                self.fifty_move_counter += 1
             else:
-                if game_move:  # Increment the # of moves since a capture or a pawn move for FEN strings
-                    if isinstance(self.get(move["pos2"]), Piece) or isinstance(self.get(move["pos1"]), Pawn):
+                if game_move:  # Increment the # of moves since a capture or a pawn move for the fifty move rule
+                    if isinstance(self.get(move[1]), Piece) or isinstance(self.get(move[0]), Pawn):
                         self.fifty_move_counter = 0
                     else:
                         self.fifty_move_counter += 1
                 
-                self.get(move["pos1"]).move(move["pos2"], game_move=game_move)
+                piece = self.get(move[0])
+                if isinstance(piece, Pawn):
+                    piece.move(move[1], is_en_passant, game_move=game_move)
+                else:
+                    piece.move(move[1], game_move=game_move)
 
         except (TypeError, AttributeError):
             print("Move Parsing Error")
 
-    def parseMoveUndo(self, move, target=None, color=None):
+    def parseMoveUndo(self, move, target=None):
         try:
-            rank = {"white": 0, "black": 7}[color]
-
             if move == "SHORT_CASTLE":
-                king, rook = self.remove((rank, 6)),  self.remove((rank, 5))
+                king, rook = self.remove((0, 6)), self.remove((0, 5))
                 if isinstance(king, Piece) and isinstance(rook, Piece):
-                    self.add(king, (rank, 4))
-                    king.setPos((rank, 4))
-                    self.add(rook, (rank, 7))
-                    rook.setPos((rank, 7))
+                    self.add(king, (0, 4))
+                    king.setPos((0, 4))
+                    self.add(rook, (0, 7))
+                    rook.setPos((0, 7))
+
+            elif move == "short_castle":
+                king, rook = self.remove((7, 6)), self.remove((7, 5))
+                if isinstance(king, Piece) and isinstance(rook, Piece):
+                    self.add(king, (7, 4))
+                    king.setPos((7, 4))
+                    self.add(rook, (7, 7))
+                    rook.setPos((7, 7))
 
             elif move == "LONG_CASTLE":
-                king, rook = self.remove((rank, 2)), self.remove((rank, 3))
+                king, rook = self.remove((0, 2)), self.remove((0, 3))
                 if isinstance(king, Piece) and isinstance(rook, Piece):
-                    self.add(king, (rank, 4))
-                    king.setPos((rank, 4))
-                    self.add(rook, (rank, 0))
-                    rook.setPos((rank, 0))
+                    self.add(king, (0, 4))
+                    king.setPos((0, 4))
+                    self.add(rook, (0, 0))
+                    rook.setPos((0, 0))
+            
+            elif move == "long_castle":
+                king, rook = self.remove((7, 2)), self.remove((7, 3))
+                if isinstance(king, Piece) and isinstance(rook, Piece):
+                    self.add(king, (7, 4))
+                    king.setPos((7, 4))
+                    self.add(rook, (7, 0))
+                    rook.setPos((7, 0))
 
             else:
-                piece = self.remove(move["pos2"])
+                piece = self.remove(move[1])
                 if isinstance(piece, Piece):
-                    self.add(piece, move["pos1"])
-                    piece.setPos(move["pos1"])
+                    self.add(piece, move[0])
+                    piece.setPos(move[0])
                     if isinstance(target, Piece):
-                        self.addNew(target, target.getPos())  # You have to use target.getPos because of en passants
+                        self.addNew(target, target.getPos())  # You should use target.getPos because of en passants (the target will remeber where it was, you don't have to figure it out)
         except (TypeError, AttributeError):
             print("Move Undo Parsing Error. Move to undo likely hasn't been made.")
+    
+    def isEnPassant(self, pos1=None, pos2=None, move=None):
+        if pos1 is None and pos2 is None:
+            pos1, pos2 = move[0], move[1]
+
+        pawn = self.get(pos1)
+        target = self.get(pos2)
+
+        if isinstance(pawn, Pawn) and not isinstance(target, Piece):
+            if pos1[0] + pawn.forward == pos2[0] and abs(pos2[1] - pos1[1]) == 1:
+                en_passant_target = self.get((pos1[0], pos2[1]))
+                if isinstance(en_passant_target, Pawn) and en_passant_target.color != pawn.color and en_passant_target.has_moved_two:
+                    return True
+        return False

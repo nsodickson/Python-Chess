@@ -1,3 +1,6 @@
+# pos[0]: row, pos[1]: col
+# move[0]: position of piece, move[1]: position of target, move[2] whether or not the move is an en passant
+
 letters = ["A", "B", "C", "D", "E", "F", "G", "H"]
 switch = {"white": "black", "black": "white"}
 scores = {"P": 1, "p": -1, "N": 3, "n": -3, "B": 3, "b": -3, "R": 5, "r": -5, "Q": 9, "q": -9, "K": 100, "k": -100}
@@ -22,22 +25,18 @@ def reconfigure(pos, rowMod, colMod):
     return pos[0] + rowMod, pos[1] + colMod
 
 
-def configureMove(pos1, pos2):
-    return {"pos1": pos1, "pos2": pos2}
-
-
-def transformPos(string_pos):
+def posToTuple(string_pos):
     return int(string_pos[1]) - 1, letters.index(string_pos[0])
 
 
-def transformMove(string_move):
-    return configureMove(transformPos(string_move[:2]), transformPos(string_move[3:]))
+def moveToTuple(string_move, is_en_passant):
+    return posToTuple(string_move[:2]), posToTuple(string_move[3:]), is_en_passant
 
 
-def detransformPos(dict_pos):
-    return f"{letters[dict_pos[1]].lower()}{dict_pos[0] + 1}"
+def posToString(pos):
+    return f"{letters[pos[1]].lower()}{pos[0] + 1}"
 
 
-def detransformMove(dict_move):
-    return detransformPos(dict_move["pos1"]) + "x" + detransformPos(dict_move["pos2"])
+def moveToString(move):
+    return posToString(move[0]) + "x" + posToString(move[1])
     

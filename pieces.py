@@ -1,3 +1,6 @@
+# pos[0]: row, pos[1]: col
+# move[0]: position of piece, move[1]: position of target, move[2] whether or not the move is an en passant
+
 class Piece:
     def __init__(self, color, starting_pos, board):
         # To-Do, make a piece class that all pieces subclass, use isinstance(piece, Piece) in board.py
@@ -27,8 +30,8 @@ class Rook(Piece):
             self.FEN_char = "R"
 
     def move(self, pos2, game_move=True):
-        self.board.remove(self.getPos())
         self.board.take(pos2)
+        self.board.remove(self.getPos())
         self.board.add(self, pos2)
         self.setPos(pos2)
 
@@ -60,8 +63,8 @@ class Bishop(Piece):
             self.FEN_char = "B"
 
     def move(self, pos2, game_move=True):
-        self.board.remove(self.getPos())
         self.board.take(pos2)
+        self.board.remove(self.getPos())
         self.board.add(self, pos2)
         self.setPos(pos2)
 
@@ -93,8 +96,8 @@ class Knight(Piece):
         self.board = board
 
     def move(self, pos2, game_move):
-        self.board.remove(self.getPos())
         self.board.take(pos2)
+        self.board.remove(self.getPos())
         self.board.add(self, pos2)
         self.setPos(pos2)
 
@@ -123,8 +126,8 @@ class King(Piece):
             self.FEN_char = "K"
 
     def move(self, pos2, game_move):
-        self.board.remove(self.getPos())
         self.board.take(pos2)
+        self.board.remove(self.getPos())
         self.board.add(self, pos2)
         self.setPos(pos2)
 
@@ -153,8 +156,8 @@ class Queen(Piece):
             self.FEN_char = "Q"
 
     def move(self, pos2, game_move=True):
-        self.board.remove(self.getPos())
         self.board.take(pos2)
+        self.board.remove(self.getPos())
         self.board.add(self, pos2)
         self.setPos(pos2)
 
@@ -185,29 +188,16 @@ class Pawn(Piece):
     def __init__(self, color, starting_pos, board):
         super().__init__(color, starting_pos, board)
         self.has_moved_two = False
-
         if self.color == "black":
             self.image = "♟"
             self.FEN_char = "p"
+            self.forward = -1
         else:
             self.image = "♙"
             self.FEN_char = "P"
+            self.forward = 1
 
-    def move(self, pos2, game_move=True):
-        self.board.remove(self.getPos())
-
-        if self.color == "white" and abs(pos2[0] - self.pos[0]) == abs(pos2[1] - self.pos[1]) and not isinstance(self.board.get(pos2), Piece):
-            # En Passant
-            self.board.take((self.pos[0], pos2[1]))
-        elif self.color == "black" and abs(pos2[0] - self.pos[0]) == -1 * abs(pos2[1] - self.pos[1]) and not isinstance(self.board.get(pos2), Piece):
-            # En Passant
-            self.board.take((self.pos[0], pos2[1]))
-        else:
-            self.board.take(pos2)
-
-        self.board.add(self, pos2)
-        self.setPos(pos2)
-
+    def move(self, pos2, is_en_passant, game_move=True):
         if game_move:
             if abs(pos2[0] - self.pos[0]) == 2:
                 self.has_moved_two = True
@@ -216,16 +206,24 @@ class Pawn(Piece):
 
             self.has_moved = True
 
+        if is_en_passant:
+            self.board.take((self.getPos()[0], pos2[1]))
+        else:
+            self.board.take(pos2)
+
+        self.board.remove(self.getPos())
+        self.board.add(self, pos2)
+        self.setPos(pos2)
+
     def checkMove(self, pos2):
-        forward = {"white": 1, "black": -1}[self.color]
         target = self.board.get(pos2)
 
         # Moving Forwards (checks are done differently than for other pieces because during en passants, the pawn's target isn't where it is moving).
-        if self.pos[1] == pos2[1] and (self.pos[0] + forward) == pos2[0]:
+        if self.pos[1] == pos2[1] and (self.pos[0] + self.forward) == pos2[0]:
             if not isinstance(target, Piece):  # Pawns can only move forwards into empty spaces
                 return True
         # Moving Diagonally
-        elif self.pos[0] + forward == pos2[0] and abs(pos2[1] - self.pos[1]) == 1:
+        elif self.pos[0] + self.forward == pos2[0] and abs(pos2[1] - self.pos[1]) == 1:
             if isinstance(target, Piece) and target.color != self.color:  # Pawns can only move diagonally to take
                 return True
             # En Passant
@@ -236,8 +234,8 @@ class Pawn(Piece):
                         if target.has_moved_two:
                             return True
         # Moving Forward Twice
-        elif self.pos[1] == pos2[1] and self.pos[0] + 2 * forward == pos2[0]:
+        elif self.pos[1] == pos2[1] and self.pos[0] + 2 * self.forward == pos2[0]:
             if not self.has_moved:
-                if not isinstance(target, Piece) and not isinstance(self.board.get((self.pos[0] + forward, pos2[1])), Piece):
+                if not isinstance(target, Piece) and not isinstance(self.board.get((self.pos[0] + self.forward, pos2[1])), Piece):
                     return True
         return False
