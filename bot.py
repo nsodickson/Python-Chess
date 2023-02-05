@@ -29,6 +29,7 @@ def FENToOneHot(FEN):
 
     return torch.tensor(array, dtype=torch.float32)
 
+
 class EvalBot(torch.nn.Module):
     def __init__(self):
         super(EvalBot, self).__init__()
@@ -60,11 +61,10 @@ class EvalBot(torch.nn.Module):
         board_state = self.linear_relu_stack(board_state)
         return board_state[0]
     
-    def algorithm(self, FEN):
+    def algorithm(self, board):
         total = 0
-        for i in FEN:
-            if i.isalpha():
-                total += scores[i]
+        for piece in board.pieces:
+            total += scores[piece.FEN_char]
         return total
 
 
@@ -78,8 +78,9 @@ class Bot:
     def setColor(self, color):
         self.color = color
     
-    def eval(self, FEN, turns, uses_nn=True):
+    def eval(self, board, turns, uses_nn=True):
         if uses_nn:
+            FEN = board.getFEN(fields=[1])
             if turns <= 18:  # Arbitrary Number
                 return self.eval_early.forward(FENToOneHot(FEN))
             elif turns <= 31:  # Arbitrary Number
@@ -87,7 +88,7 @@ class Bot:
             else:
                 return self.eval_late.forward(FENToOneHot(FEN))
         else:
-            return self.eval_early.algorithm(FEN)
+            return self.eval_early.algorithm(board)
 
     def random(self, board):
         all_moves = board.allMoves(self.color)
@@ -109,12 +110,12 @@ class Bot:
         for move in all_moves:
 
             if type(move) == tuple:
-                piece = board.get(move[0])
+                pos1, pos2, is_en_passant = move
 
-                if move[2]:
-                    target = board.get((move[0][0], move[1][1]))
+                if is_en_passant:
+                    target = board.get((pos1[0], pos2[1]))
                 else:
-                    target = board.get(move[1])
+                    target = board.get(pos2)
             else:
                 target = None
 
@@ -126,17 +127,15 @@ class Bot:
                     best_score = score
                     best_move = move
             else:
-                score = self.eval(board.getFEN(fields=[1]), board.getNumMoves(), uses_nn=uses_nn)
+                score = self.eval(board, board.getNumMoves(), uses_nn=uses_nn)
                 score = -score if color == "black" else score
 
                 if best_score is None or score > best_score:
                     best_score = score
-                    
                     best_move = move
 
             board.parseMoveUndo(move, target)
 
-        
         return best_move, best_score
         
 
@@ -197,6 +196,7 @@ class ChessDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return self.X_data.iloc[idx], self.y_data.iloc[idx]
+
 
 def chessTrainTestLoop(data, model, loss, optim, epochs):
     data_X, data_y = data["FEN"], data["Evaluation"]

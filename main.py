@@ -22,10 +22,10 @@ def play(board, ai_player=None, ai_uses_nn=True, switch_view=False, show_FEN=Fal
         if show_FEN:
             print(board.getFEN())
 
-        print("\n" + "-"*50)
+        print("\n" + "="*50)
 
         if ai_player is not None and ai_player.color == color:
-            move, score = ai_player.deepSearch(board, uses_nn=ai_uses_nn)
+            move, score = ai_player.deepSearch(board, uses_nn=ai_uses_nn, depth=1)
             print(f"\n{color[0].upper() + color[1:]}'s move: {moveToString(move)}")
             board.parseMove(move, game_move=True)
             if show_eval:
@@ -138,7 +138,7 @@ def playFromCommandLine():
 
 
 def loadBot(stage=None):
-    with open("bot.pkl", 'rb') as f:
+    with open("/Users/noah/Documents/GitHub/Python-Chess/bot.pkl", 'rb') as f:
         return pkl.load(f)
 
 
@@ -147,6 +147,10 @@ if __name__ == "__main__":
     board.setup()
 
     print("Welcome to Python Chess")
+
+    param1 = True if "switch" in argv else False
+    param2 = True if "show-fen" in argv else False
+
     with_ai = input("Would you like to play with the ai? (y)es/(n)o: ").upper()
     if with_ai == "YES" or with_ai == "Y":
         bot = loadBot()
@@ -156,7 +160,6 @@ if __name__ == "__main__":
         uses_nn=None
         bot = None
 
-    print("-"*50)
+    print("="*50)
 
-    play(board, ai_player=bot, ai_uses_nn=uses_nn)
-    
+    play(board, ai_player=bot, ai_uses_nn=uses_nn, switch_view=param2, show_FEN=param1)
